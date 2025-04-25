@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build:osx": "python3 electron_patcher.py pack ./src /Applications/Яндекс\\ Музыка.app"
+  },
   "dependencies": {
     "@electron/asar": "^3.2.13",
     "@octokit/rest": "^21.1.1",
