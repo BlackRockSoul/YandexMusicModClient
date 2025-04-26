@@ -10,6 +10,9 @@ import { LastFmApi } from "./api/LastFmApi";
 import { ScrobblerTypeEnum } from "../../constants/scrobblerTypeEnum";
 
 export class LastFmScrobbler implements IScrobblerService {
+  private static readonly MIN_TRACK_DURATION_MS = 30000; // 30 seconds
+  private static readonly MAX_SCROBBLE_TIME_MS = 240000; // 4 minutes
+
   public readonly type = ScrobblerTypeEnum.LastFm;
 
   private readonly logger = new Logger("LastFmScrobbler");
@@ -23,7 +26,11 @@ export class LastFmScrobbler implements IScrobblerService {
   });
   private readonly SESSION_STORE_KEY = "session";
 
-  private currentTrackTimeout: NodeJS.Timeout | null = null;
+  /* #region Current track state */
+  private currentTrack: ITrack | null = null;
+  private currentTrackStartTime: number | null = null;
+  private currentTrackPlayedTime: number = 0;
+  /* #endregion */
 
   public constructor(apiKey: string, sharedSecret: string, baseUrl: string) {
     this.API_KEY = apiKey;
@@ -66,66 +73,114 @@ export class LastFmScrobbler implements IScrobblerService {
   }
 
   public handleEvent(playingState: IPlayingState): void {
-    if (playingState.isPlaying) {
-      void this.updateNowPlaying(playingState);
+    if (this.isTrackChanged(playingState.track)) {
+      this.handleTrackChange(playingState);
+    } else if (this.isPlaybackStateChanged(playingState)) {
+      this.handlePlaybackStateChange(playingState);
     }
-
-    void this.enqueueScrobble(playingState);
   }
 
-  private async updateNowPlaying(playingState: IPlayingState): Promise<void> {
-    if (!this.isLoggedIn() || !playingState?.track) return;
+  private isTrackChanged(newTrack: ITrack): boolean {
+    return this.currentTrack?.id !== newTrack.id;
+  }
 
-    this.logger.info("Updating now playing: ", playingState.track.title);
+  private handleTrackChange(playingState: IPlayingState): void {
+    this.maybeScrobbleCurrentTrack();
+
+    this.currentTrack = playingState.track;
+    this.currentTrackStartTime = null;
+    this.currentTrackPlayedTime = 0;
+
+    if (playingState.isPlaying) {
+      this.startTrackPlayback();
+      void this.updateNowPlaying(playingState.track);
+    }
+  }
+
+  private isPlaybackStateChanged(playingState: IPlayingState): boolean {
+    return (
+      this.currentTrack?.id === playingState.track?.id &&
+      (playingState.isPlaying
+        ? this.currentTrackStartTime === null
+        : this.currentTrackStartTime !== null)
+    );
+  }
+
+  private handlePlaybackStateChange(playingState: IPlayingState): void {
+    if (playingState.isPlaying) {
+      this.startTrackPlayback();
+    } else {
+      this.pauseTrackPlayback();
+      this.maybeScrobbleCurrentTrack();
+    }
+  }
+
+  private startTrackPlayback(): void {
+    if (!this.currentTrack) return;
+
+    this.currentTrackStartTime = Date.now();
+  }
+
+  private pauseTrackPlayback(): void {
+    if (!this.currentTrack || !this.currentTrackStartTime) return;
+
+    this.currentTrackPlayedTime += Date.now() - this.currentTrackStartTime;
+    this.currentTrackStartTime = null;
+  }
+
+  private maybeScrobbleCurrentTrack(): void {
+    if (!this.currentTrack) return;
+
+    const totalPlayedTime = this.calculateTotalPlayedTime();
+    if (this.isTrackEligibleForScrobble(this.currentTrack, totalPlayedTime)) {
+      void this.sendScrobble(this.currentTrack);
+    }
+  }
+
+  private calculateTotalPlayedTime(): number {
+    let totalTime = this.currentTrackPlayedTime;
+    if (this.currentTrackStartTime) {
+      totalTime += Date.now() - this.currentTrackStartTime;
+    }
+
+    return totalTime;
+  }
+
+  private isTrackEligibleForScrobble(
+    track: ITrack,
+    playedTimeMs: number
+  ): boolean {
+    if (track.durationMs < LastFmScrobbler.MIN_TRACK_DURATION_MS) {
+      this.logger.info("Track is too short to scrobble");
+      return false;
+    }
+
+    const minPlayTimeMs = Math.min(
+      track.durationMs / 2,
+      LastFmScrobbler.MAX_SCROBBLE_TIME_MS
+    );
+
+    if (playedTimeMs < minPlayTimeMs) {
+      this.logger.info("Track is not played long enough to scrobble");
+      return false;
+    }
+
+    return true;
+  }
+
+  private async updateNowPlaying(track: ITrack): Promise<void> {
+    this.logger.info("Updating now playing: ", track.title);
 
     try {
-      await this.api.updateNowPlaying(getTrackInfo(playingState.track));
+      await this.api.updateNowPlaying(getTrackInfo(track));
     } catch (error) {
       this.logger.error("Failed to update now playing", error);
     }
   }
 
-  private async enqueueScrobble(playingState: IPlayingState): Promise<void> {
-    const trackDuration = playingState.track.durationMs / 1000;
-
-    // If track is too short, don't scrobble
-    if (trackDuration < 30) {
-      this.logger.info(
-        "Track too short to scrobble:",
-        trackDuration,
-        "seconds"
-      );
-      return;
-    }
-
-    // Clear any existing timeout
-    if (this.currentTrackTimeout) {
-      clearTimeout(this.currentTrackTimeout);
-    }
-
-    if (!playingState.isPlaying) {
-      return;
-    }
-
-    // Calculate minimum required play time (half duration or 4 minutes, whichever is less)
-    const minPlayTimeMs = Math.min(trackDuration / 2, 240) * 1000;
-    this.logger.info(
-      "Enqueuing scrobble: ",
-      playingState.track.title,
-      "after: ",
-      minPlayTimeMs / 1000,
-      "seconds"
-    );
-
-    // Set timeout to scrobble after minimum play time
-    this.currentTrackTimeout = setTimeout(async () => {
-      this.logger.info("Scrobbling track:", playingState.track.title);
-
-      await this.sendScrobble(playingState.track);
-    }, minPlayTimeMs);
-  }
-
   private async sendScrobble(track: ITrack): Promise<void> {
+    this.logger.info("Scrobbling track:", track.title);
+
     try {
       await this.api.scrobble(getTrackInfo(track));
     } catch (error) {

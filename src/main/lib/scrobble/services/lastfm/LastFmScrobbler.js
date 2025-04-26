@@ -16,7 +16,9 @@ class LastFmScrobbler {
             encryptionKey: "lastfm-session-key",
         });
         this.SESSION_STORE_KEY = "session";
-        this.currentTrackTimeout = null;
+        this.currentTrack = null;
+        this.currentTrackStartTime = null;
+        this.currentTrackPlayedTime = 0;
         this.API_KEY = apiKey;
         this.api = new LastFmApi_1.LastFmApi(this.API_KEY, sharedSecret, baseUrl, () => this.getStoredSession());
     }
@@ -43,42 +45,90 @@ class LastFmScrobbler {
         this.logger.info("Logged out");
     }
     handleEvent(playingState) {
-        if (playingState.isPlaying) {
-            void this.updateNowPlaying(playingState);
+        if (this.isTrackChanged(playingState.track)) {
+            this.handleTrackChange(playingState);
         }
-        void this.enqueueScrobble(playingState);
+        else if (this.isPlaybackStateChanged(playingState)) {
+            this.handlePlaybackStateChange(playingState);
+        }
     }
-    async updateNowPlaying(playingState) {
-        if (!this.isLoggedIn() || !playingState?.track)
+    isTrackChanged(newTrack) {
+        return this.currentTrack?.id !== newTrack.id;
+    }
+    handleTrackChange(playingState) {
+        this.maybeScrobbleCurrentTrack();
+        this.currentTrack = playingState.track;
+        this.currentTrackStartTime = null;
+        this.currentTrackPlayedTime = 0;
+        if (playingState.isPlaying) {
+            this.startTrackPlayback();
+            void this.updateNowPlaying(playingState.track);
+        }
+    }
+    isPlaybackStateChanged(playingState) {
+        return (this.currentTrack?.id === playingState.track?.id &&
+            (playingState.isPlaying
+                ? this.currentTrackStartTime === null
+                : this.currentTrackStartTime !== null));
+    }
+    handlePlaybackStateChange(playingState) {
+        if (playingState.isPlaying) {
+            this.startTrackPlayback();
+        }
+        else {
+            this.pauseTrackPlayback();
+            this.maybeScrobbleCurrentTrack();
+        }
+    }
+    startTrackPlayback() {
+        if (!this.currentTrack)
             return;
-        this.logger.info("Updating now playing: ", playingState.track.title);
+        this.currentTrackStartTime = Date.now();
+    }
+    pauseTrackPlayback() {
+        if (!this.currentTrack || !this.currentTrackStartTime)
+            return;
+        this.currentTrackPlayedTime += Date.now() - this.currentTrackStartTime;
+        this.currentTrackStartTime = null;
+    }
+    maybeScrobbleCurrentTrack() {
+        if (!this.currentTrack)
+            return;
+        const totalPlayedTime = this.calculateTotalPlayedTime();
+        if (this.isTrackEligibleForScrobble(this.currentTrack, totalPlayedTime)) {
+            void this.sendScrobble(this.currentTrack);
+        }
+    }
+    calculateTotalPlayedTime() {
+        let totalTime = this.currentTrackPlayedTime;
+        if (this.currentTrackStartTime) {
+            totalTime += Date.now() - this.currentTrackStartTime;
+        }
+        return totalTime;
+    }
+    isTrackEligibleForScrobble(track, playedTimeMs) {
+        if (track.durationMs < LastFmScrobbler.MIN_TRACK_DURATION_MS) {
+            this.logger.info("Track is too short to scrobble");
+            return false;
+        }
+        const minPlayTimeMs = Math.min(track.durationMs / 2, LastFmScrobbler.MAX_SCROBBLE_TIME_MS);
+        if (playedTimeMs < minPlayTimeMs) {
+            this.logger.info("Track is not played long enough to scrobble");
+            return false;
+        }
+        return true;
+    }
+    async updateNowPlaying(track) {
+        this.logger.info("Updating now playing: ", track.title);
         try {
-            await this.api.updateNowPlaying((0, trackInfo_1.getTrackInfo)(playingState.track));
+            await this.api.updateNowPlaying((0, trackInfo_1.getTrackInfo)(track));
         }
         catch (error) {
             this.logger.error("Failed to update now playing", error);
         }
     }
-    async enqueueScrobble(playingState) {
-        const trackDuration = playingState.track.durationMs / 1000;
-        if (trackDuration < 30) {
-            this.logger.info("Track too short to scrobble:", trackDuration, "seconds");
-            return;
-        }
-        if (this.currentTrackTimeout) {
-            clearTimeout(this.currentTrackTimeout);
-        }
-        if (!playingState.isPlaying) {
-            return;
-        }
-        const minPlayTimeMs = Math.min(trackDuration / 2, 240) * 1000;
-        this.logger.info("Enqueuing scrobble: ", playingState.track.title, "after: ", minPlayTimeMs / 1000, "seconds");
-        this.currentTrackTimeout = setTimeout(async () => {
-            this.logger.info("Scrobbling track:", playingState.track.title);
-            await this.sendScrobble(playingState.track);
-        }, minPlayTimeMs);
-    }
     async sendScrobble(track) {
+        this.logger.info("Scrobbling track:", track.title);
         try {
             await this.api.scrobble((0, trackInfo_1.getTrackInfo)(track));
         }
@@ -104,3 +154,5 @@ class LastFmScrobbler {
     }
 }
 exports.LastFmScrobbler = LastFmScrobbler;
+LastFmScrobbler.MIN_TRACK_DURATION_MS = 30000;
+LastFmScrobbler.MAX_SCROBBLE_TIME_MS = 240000;
