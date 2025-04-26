@@ -8,6 +8,7 @@ const trackInfo_1 = require("./utils/trackInfo");
 const LastFmApi_1 = require("./api/LastFmApi");
 const scrobblerTypeEnum_1 = require("../../constants/scrobblerTypeEnum");
 class LastFmScrobbler {
+    /* #endregion */
     constructor(apiKey, sharedSecret, baseUrl) {
         this.type = scrobblerTypeEnum_1.ScrobblerTypeEnum.LastFm;
         this.logger = new Logger_1.Logger("LastFmScrobbler");
@@ -16,6 +17,7 @@ class LastFmScrobbler {
             encryptionKey: "lastfm-session-key",
         });
         this.SESSION_STORE_KEY = "session";
+        /* #region Current track state */
         this.currentTrack = null;
         this.currentTrackStartTime = null;
         this.currentTrackPlayedTime = 0;
@@ -23,6 +25,7 @@ class LastFmScrobbler {
         this.api = new LastFmApi_1.LastFmApi(this.API_KEY, sharedSecret, baseUrl, () => this.getStoredSession());
     }
     isEnabled() {
+        // TODO: Implement based on user preferences
         return this.isLoggedIn();
     }
     isLoggedIn() {
@@ -106,6 +109,15 @@ class LastFmScrobbler {
         }
         return totalTime;
     }
+    /**
+     * Checks if a track is eligible for scrobbling
+     *
+     * @see https://www.last.fm/api/scrobbling#when-is-a-scrobble-a-scrobble
+     *
+     * @param track The track to check
+     * @param {number} playedTimeMs The total played time of the track
+     * @returns {boolean} result of the eligibility check
+     */
     isTrackEligibleForScrobble(track, playedTimeMs) {
         if (track.durationMs < LastFmScrobbler.MIN_TRACK_DURATION_MS) {
             this.logger.info("Track is too short to scrobble");
@@ -154,5 +166,5 @@ class LastFmScrobbler {
     }
 }
 exports.LastFmScrobbler = LastFmScrobbler;
-LastFmScrobbler.MIN_TRACK_DURATION_MS = 30000;
-LastFmScrobbler.MAX_SCROBBLE_TIME_MS = 240000;
+LastFmScrobbler.MIN_TRACK_DURATION_MS = 30000; // 30 seconds
+LastFmScrobbler.MAX_SCROBBLE_TIME_MS = 240000; // 4 minutes

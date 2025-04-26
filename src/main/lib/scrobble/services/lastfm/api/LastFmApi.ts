@@ -26,6 +26,8 @@ export class LastFmApi {
   /**
    * Gets an authentication token from Last.fm
    *
+   * @see https://www.last.fm/api/show/auth.getToken
+   *
    * @returns A token string for the authentication process
    */
   public async getToken(): Promise<string> {
@@ -40,6 +42,8 @@ export class LastFmApi {
 
   /**
    * Gets a session from Last.fm using a token
+   *
+   * @see https://www.last.fm/api/show/auth.getSession
    *
    * @param token Auth token from getToken
    * @returns Session object with key and user information
@@ -57,6 +61,8 @@ export class LastFmApi {
   /**
    * Updates the now playing track on Last.fm
    *
+   * @see https://www.last.fm/api/show/track.updateNowPlaying
+   *
    * @param trackInfo Track information to send
    */
   public async updateNowPlaying(trackInfo: ILastFmTrackInfo): Promise<void> {
@@ -67,6 +73,8 @@ export class LastFmApi {
 
   /**
    * Scrobbles a track on Last.fm
+   *
+   * @see https://www.last.fm/api/show/track.scrobble
    *
    * @param trackInfo Track information to scrobble
    * @param timestamp Unix timestamp when the track was played
@@ -82,6 +90,8 @@ export class LastFmApi {
 
   /**
    * Handles possible warnings from a scrobble result
+   *
+   * @see https://www.last.fm/api/show/track.scrobble#attributes
    *
    * @param result The result to handle
    * @throws Error if track was ignored
@@ -108,6 +118,11 @@ export class LastFmApi {
 
   /**
    * Makes a request to the Last.fm API
+   *
+   * @param method The method to call
+   * @param params The parameters to pass to the method
+   * @param options The options for the request
+   * @returns The response from the Last.fm API
    */
   private async request<T extends keyof ILastFmApi>(
     method: T,

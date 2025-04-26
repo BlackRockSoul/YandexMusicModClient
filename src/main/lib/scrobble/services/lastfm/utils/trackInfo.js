@@ -1,6 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTrackInfo = getTrackInfo;
+/**
+ * Extracts Last.fm compatible track information from a track object
+ *
+ * @see https://www.last.fm/api/show/track.updateNowPlaying#params
+ *
+ * @param track The track to extract information from
+ * @returns Last.fm compatible track information
+ */
 function getTrackInfo(track) {
     const mainArtist = track.artists?.[0];
     if (!track.title || !mainArtist?.name) {

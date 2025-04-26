@@ -146,6 +146,15 @@ export class LastFmScrobbler implements IScrobblerService {
     return totalTime;
   }
 
+  /**
+   * Checks if a track is eligible for scrobbling
+   *
+   * @see https://www.last.fm/api/scrobbling#when-is-a-scrobble-a-scrobble
+   *
+   * @param track The track to check
+   * @param {number} playedTimeMs The total played time of the track
+   * @returns {boolean} result of the eligibility check
+   */
   private isTrackEligibleForScrobble(
     track: ITrack,
     playedTimeMs: number

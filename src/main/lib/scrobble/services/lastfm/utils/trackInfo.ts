@@ -4,6 +4,8 @@ import type { ILastFmTrackInfo } from "../types/ILastFmApi";
 /**
  * Extracts Last.fm compatible track information from a track object
  *
+ * @see https://www.last.fm/api/show/track.updateNowPlaying#params
+ *
  * @param track The track to extract information from
  * @returns Last.fm compatible track information
  */

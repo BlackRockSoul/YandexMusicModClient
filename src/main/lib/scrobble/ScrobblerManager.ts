@@ -2,6 +2,7 @@ import type { IScrobblerService } from "./core/interfaces/IScrobblerService";
 import type { IPlayingState } from "./core/types/IPlayingState";
 import type { ITrack } from "./core/types/ITrack";
 import { Logger } from "../../packages/logger/Logger";
+import { ScrobblerTypeEnum } from "./constants/scrobblerTypeEnum";
 
 /**
  * ScrobblerManager is responsible for managing all scrobbler services
@@ -36,7 +37,21 @@ export class ScrobblerManager {
   }
 
   /**
+   * Gets a scrobbler service by type
+   *
+   * @param type The type of scrobbler service to get
+   * @returns The scrobbler service or undefined if not found
+   */
+  public getScrobblerByType(
+    type: ScrobblerTypeEnum
+  ): IScrobblerService | undefined {
+    return this.scrobblers.find((scrobbler) => scrobbler.type === type);
+  }
+
+  /**
    * Handles a playing state event and distributes it to all enabled scrobblers
+   *
+   * Has a debounce to prevent spamming the scrobblers with the same event.
    *
    * @param playingState The current playing state
    */
@@ -60,6 +75,11 @@ export class ScrobblerManager {
     }, ScrobblerManager.DEBOUNCE_DELAY_MS);
   }
 
+  /**
+   * Processes a playing state event and distributes it to all enabled scrobblers
+   *
+   * @param playingState The current playing state
+   */
   private processPlayingState(playingState: IPlayingState): void {
     if (!playingState) return;
 

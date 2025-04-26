@@ -3,6 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LastFmApi = void 0;
 const signature_1 = require("../utils/signature");
 const Logger_1 = require("../../../../../packages/logger/Logger");
+/**
+ * Handles all Last.fm API communication
+ */
 class LastFmApi {
     constructor(apiKey, sharedSecret, baseUrl, sessionProvider) {
         this.apiKey = apiKey;
@@ -11,6 +14,13 @@ class LastFmApi {
         this.sessionProvider = sessionProvider;
         this.logger = new Logger_1.Logger("LastFmApi");
     }
+    /**
+     * Gets an authentication token from Last.fm
+     *
+     * @see https://www.last.fm/api/show/auth.getToken
+     *
+     * @returns A token string for the authentication process
+     */
     async getToken() {
         const { token } = await this.request("auth.getToken", undefined, {
             noSig: true,
@@ -19,14 +29,37 @@ class LastFmApi {
         });
         return token;
     }
+    /**
+     * Gets a session from Last.fm using a token
+     *
+     * @see https://www.last.fm/api/show/auth.getSession
+     *
+     * @param token Auth token from getToken
+     * @returns Session object with key and user information
+     */
     async getSession(token) {
         const { session } = await this.request("auth.getSession", { token }, { noSk: true, method: "GET" });
         return session;
     }
+    /**
+     * Updates the now playing track on Last.fm
+     *
+     * @see https://www.last.fm/api/show/track.updateNowPlaying
+     *
+     * @param trackInfo Track information to send
+     */
     async updateNowPlaying(trackInfo) {
         const result = await this.request("track.updateNowPlaying", trackInfo);
         this.handleScrobbleResult(result.nowplaying);
     }
+    /**
+     * Scrobbles a track on Last.fm
+     *
+     * @see https://www.last.fm/api/show/track.scrobble
+     *
+     * @param trackInfo Track information to scrobble
+     * @param timestamp Unix timestamp when the track was played
+     */
     async scrobble(trackInfo) {
         const result = await this.request("track.scrobble", {
             ...trackInfo,
@@ -34,6 +67,14 @@ class LastFmApi {
         });
         this.handleScrobbleResult(result.scrobbles.scrobble);
     }
+    /**
+     * Handles possible warnings from a scrobble result
+     *
+     * @see https://www.last.fm/api/show/track.scrobble#attributes
+     *
+     * @param result The result to handle
+     * @throws Error if track was ignored
+     */
     handleScrobbleResult({ ignoredMessage, }) {
         const warningMessages = [];
         if (ignoredMessage?.code !== "0") {
@@ -46,6 +87,14 @@ class LastFmApi {
             throw new Error(warningMessages.join("; "));
         }
     }
+    /**
+     * Makes a request to the Last.fm API
+     *
+     * @param method The method to call
+     * @param params The parameters to pass to the method
+     * @param options The options for the request
+     * @returns The response from the Last.fm API
+     */
     async request(method, params, options = {
         noSig: false,
         noSk: false,
@@ -74,6 +123,14 @@ class LastFmApi {
         const response = await fetch(url, { method: options.method, body });
         return await this.handleResponse(response);
     }
+    /**
+     * Handles a response from the Last.fm API
+     *
+     * @param response The response to handle
+     * @returns The parsed response
+     * @throws Error if the response is not JSON
+     * @throws Error if the response is an API error
+     */
     async handleResponse(response) {
         const text = await response.text().catch((e) => {
             this.logger.error("Failed to read response", e);
@@ -94,6 +151,12 @@ class LastFmApi {
         }
         return result;
     }
+    /**
+     * `ILastFmApiError` type guard
+     *
+     * @param error The error to check
+     * @returns {boolean} True if the error is an API error, false otherwise
+     */
     isApiError(error) {
         return (typeof error === "object" &&
             error !== null &&

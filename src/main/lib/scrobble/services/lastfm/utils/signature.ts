@@ -1,13 +1,18 @@
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 /**
  * Generates a signature for Last.fm API calls according to their authentication requirements
- * 
+ *
+ * @see https://www.last.fm/api/desktopauth#_6-sign-your-calls
+ *
  * @param params The parameters to include in the signature
  * @param sharedSecret The shared secret from Last.fm
  * @returns MD5 hash signature
  */
-export function generateSignature(params: URLSearchParams, sharedSecret: string): string {
+export function generateSignature(
+  params: URLSearchParams,
+  sharedSecret: string
+): string {
   // Filter out format, callback, and api_sig parameters
   const sortedParams = Array.from(params.entries())
     .filter(([key]) => !["format", "callback", "api_sig"].includes(key))
@@ -20,4 +25,4 @@ export function generateSignature(params: URLSearchParams, sharedSecret: string)
 
   // Generate MD5 hash
   return crypto.createHash("md5").update(signatureString).digest("hex");
-} 
+}
