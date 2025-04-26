@@ -17,10 +17,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScrobblerManager = void 0;
 exports.handlePlayingStateEvent = handlePlayingStateEvent;
 exports.getScrobblers = getScrobblers;
-var ScrobblerManager_1 = require("./ScrobblerManager");
+const ScrobblerManager_1 = require("./ScrobblerManager");
 Object.defineProperty(exports, "ScrobblerManager", { enumerable: true, get: function () { return ScrobblerManager_1.ScrobblerManager; } });
-var LastFmScrobbler_1 = require("./services/lastfm/LastFmScrobbler");
-var scrobblerManager = new ScrobblerManager_1.ScrobblerManager();
+const LastFmScrobbler_1 = require("./services/lastfm/LastFmScrobbler");
+const scrobblerManager = new ScrobblerManager_1.ScrobblerManager();
 scrobblerManager.registerScrobbler(new LastFmScrobbler_1.LastFmScrobbler("ebd53b66afc398d291226adc17b1c5e1", "cd1c5e25adabf68e3621679a3943bb07", "https://ws.audioscrobbler.com/2.0"));
 function handlePlayingStateEvent(playingState) {
     scrobblerManager.handlePlayingState(playingState);
