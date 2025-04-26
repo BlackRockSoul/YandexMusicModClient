@@ -8,11 +8,15 @@ import { Logger } from "../../packages/logger/Logger";
  * and distributing playing state events to them.
  */
 export class ScrobblerManager {
+  private static readonly DEBOUNCE_DELAY_MS = 1500;
+
   private readonly logger = new Logger("ScrobblerManager");
   private readonly scrobblers: IScrobblerService[] = [];
 
   private currentTrackId: ITrack["id"] | null = null;
   private currentTrackPlaying: boolean = false;
+
+  private debounceTimeout: NodeJS.Timeout | null = null;
 
   /**
    * Registers a scrobbler service with the manager
@@ -40,17 +44,30 @@ export class ScrobblerManager {
     if (!playingState?.track) return;
     if (playingState.status.startsWith("loading")) return;
 
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+      this.debounceTimeout = null;
+    }
+
     if (
       playingState.track.id === this.currentTrackId &&
       this.currentTrackPlaying === playingState.isPlaying
     )
       return;
 
+    this.debounceTimeout = setTimeout(() => {
+      this.processPlayingState(playingState);
+    }, ScrobblerManager.DEBOUNCE_DELAY_MS);
+  }
+
+  private processPlayingState(playingState: IPlayingState): void {
+    if (!playingState) return;
+
     this.currentTrackId = playingState.track.id;
     this.currentTrackPlaying = playingState.isPlaying;
 
     this.logger.info(
-      `Handling playing state: ${
+      `Processing playing state: ${
         playingState.isPlaying ? "Playing" : "Paused"
       } with status "${playingState.status}" - ${playingState.track.title}`
     );
