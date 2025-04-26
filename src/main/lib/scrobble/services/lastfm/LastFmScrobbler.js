@@ -6,10 +6,10 @@ const Logger_1 = require("../../../../packages/logger/Logger");
 const electron_store_1 = require("electron-store");
 const trackInfo_1 = require("./utils/trackInfo");
 const LastFmApi_1 = require("./api/LastFmApi");
-const scrobblerType_1 = require("../../constants/scrobblerType");
+const scrobblerTypeEnum_1 = require("../../constants/scrobblerTypeEnum");
 class LastFmScrobbler {
     constructor(apiKey, sharedSecret, baseUrl) {
-        this.type = scrobblerType_1.ScrobblerType.LastFm;
+        this.type = scrobblerTypeEnum_1.ScrobblerTypeEnum.LastFm;
         this.logger = new Logger_1.Logger("LastFmScrobbler");
         this.store = new electron_store_1.default({
             name: "lastfm",

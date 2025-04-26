@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ScrobblerType = void 0;
-var ScrobblerType;
-(function (ScrobblerType) {
-    ScrobblerType["LastFm"] = "Last.fm";
-})(ScrobblerType || (exports.ScrobblerType = ScrobblerType = {}));
+exports.ScrobblerTypeEnum = void 0;
+var ScrobblerTypeEnum;
+(function (ScrobblerTypeEnum) {
+    ScrobblerTypeEnum["LastFm"] = "Last.fm";
+})(ScrobblerTypeEnum || (exports.ScrobblerTypeEnum = ScrobblerTypeEnum = {}));

@@ -1,11 +1,11 @@
-import { ScrobblerType } from "../../constants/scrobblerTypeEnum";
-import { IPlayingState } from "../types/IPlayingState";
+import { ScrobblerTypeEnum } from "../../constants/scrobblerTypeEnum";
+import type { IPlayingState } from "../types/IPlayingState";
 
 export interface IScrobblerService {
   /**
    * Name of the scrobbler service
    */
-  readonly type: ScrobblerType;
+  readonly type: ScrobblerTypeEnum;
 
   /**
    * Checks if the scrobbler is enabled in user settings

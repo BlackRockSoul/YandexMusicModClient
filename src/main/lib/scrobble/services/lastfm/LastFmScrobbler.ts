@@ -7,10 +7,10 @@ import { Logger } from "../../../../packages/logger/Logger";
 import ElectronStore from "electron-store";
 import { getTrackInfo } from "./utils/trackInfo";
 import { LastFmApi } from "./api/LastFmApi";
-import { ScrobblerType } from "../../constants/scrobblerTypeEnum";
+import { ScrobblerTypeEnum } from "../../constants/scrobblerTypeEnum";
 
 export class LastFmScrobbler implements IScrobblerService {
-  public readonly type = ScrobblerType.LastFm;
+  public readonly type = ScrobblerTypeEnum.LastFm;
 
   private readonly logger = new Logger("LastFmScrobbler");
 

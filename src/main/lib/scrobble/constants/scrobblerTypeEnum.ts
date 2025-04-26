@@ -1,3 +1,3 @@
-export enum ScrobblerType {
+export enum ScrobblerTypeEnum {
   LastFm = "Last.fm",
 }
