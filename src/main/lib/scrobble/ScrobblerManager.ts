@@ -2,7 +2,6 @@ import type { IScrobblerService } from "./core/interfaces/IScrobblerService";
 import type { IPlayingState } from "./core/types/IPlayingState";
 import type { ITrack } from "./core/types/ITrack";
 import { Logger } from "../../packages/logger/Logger";
-import * as crypto from "crypto";
 
 /**
  * ScrobblerManager is responsible for managing all scrobbler services
@@ -12,7 +11,7 @@ export class ScrobblerManager {
   private readonly logger = new Logger("ScrobblerManager");
   private readonly scrobblers: IScrobblerService[] = [];
 
-  private currentTrackHash: string | null = null;
+  private currentTrackId: ITrack["id"] | null = null;
   private currentTrackPlaying: boolean = false;
 
   /**
@@ -37,20 +36,17 @@ export class ScrobblerManager {
    *
    * @param playingState The current playing state
    */
-  public async handlePlayingState(playingState: IPlayingState): Promise<void> {
+  public handlePlayingState(playingState: IPlayingState): void {
     if (!playingState?.track) return;
     if (playingState.status.startsWith("loading")) return;
 
-    const trackHash = this.getTrackHash(playingState.track);
-
     if (
-      trackHash === this.currentTrackHash &&
+      playingState.track.id === this.currentTrackId &&
       this.currentTrackPlaying === playingState.isPlaying
-    ) {
+    )
       return;
-    }
 
-    this.currentTrackHash = trackHash;
+    this.currentTrackId = playingState.track.id;
     this.currentTrackPlaying = playingState.isPlaying;
 
     this.logger.info(
@@ -62,12 +58,5 @@ export class ScrobblerManager {
     this.scrobblers
       .filter((scrobbler) => scrobbler.isEnabled())
       .forEach((scrobbler) => scrobbler.handleEvent(playingState));
-  }
-
-  private getTrackHash(track: ITrack): string {
-    return crypto
-      .createHash("sha256")
-      .update(JSON.stringify(track))
-      .digest("hex");
   }
 }
