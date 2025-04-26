@@ -33,6 +33,20 @@ export interface ILastFmApi {
   };
 }
 
+interface ILastFmApiResponseTrackInfo {
+  corrected: `${number}`;
+  "#text": string;
+}
+
+export interface ILastFmApiScrobbleResult {
+  artist: ILastFmApiResponseTrackInfo;
+  track: ILastFmApiResponseTrackInfo;
+  albumArtist: ILastFmApiResponseTrackInfo;
+  album: ILastFmApiResponseTrackInfo;
+
+  ignoredMessage: { code: `${number}`; "#text": string };
+}
+
 export interface ILastFmApiResponse {
   "auth.getToken": {
     token: string;
@@ -40,6 +54,21 @@ export interface ILastFmApiResponse {
   "auth.getSession": {
     session: ILastFmSession;
   };
-  "track.updateNowPlaying": void;
-  "track.scrobble": void;
+  "track.updateNowPlaying": {
+    nowplaying: ILastFmApiScrobbleResult;
+  };
+  "track.scrobble": {
+    scrobbles: {
+      scrobble: ILastFmApiScrobbleResult & {
+        timestamp: `${number}`;
+      };
+
+      "@attr": { ignored: number; accepted: number };
+    };
+  };
+}
+
+export interface ILastFmApiError {
+  message: string;
+  error: number;
 }

@@ -24,13 +24,27 @@ class LastFmApi {
         return session;
     }
     async updateNowPlaying(trackInfo) {
-        await this.request("track.updateNowPlaying", trackInfo);
+        const result = await this.request("track.updateNowPlaying", trackInfo);
+        this.handleScrobbleResult(result.nowplaying);
     }
     async scrobble(trackInfo) {
-        await this.request("track.scrobble", {
+        const result = await this.request("track.scrobble", {
             ...trackInfo,
             timestamp: Math.floor(Date.now() / 1000),
         });
+        this.handleScrobbleResult(result.scrobbles.scrobble);
+    }
+    handleScrobbleResult({ ignoredMessage, }) {
+        const warningMessages = [];
+        if (ignoredMessage?.code !== "0") {
+            warningMessages.push(`Track was ignored by Last.fm with code: ${ignoredMessage.code}`);
+            if (ignoredMessage["#text"]) {
+                warningMessages.push(ignoredMessage["#text"]);
+            }
+        }
+        if (warningMessages.length > 0) {
+            throw new Error(warningMessages.join("; "));
+        }
     }
     async request(method, params, options = {
         noSig: false,
@@ -58,16 +72,33 @@ class LastFmApi {
             : `${this.baseUrl}?${queryParams.toString()}&format=json`;
         const body = isPostMethod ? queryParams : undefined;
         const response = await fetch(url, { method: options.method, body });
-        return await response
-            .text()
-            .then((text) => {
-            this.logger.debug("Response", text);
-            return JSON.parse(text);
-        })
-            .catch((e) => {
-            this.logger.error("Failed to fetch from Last.fm API", e);
+        return await this.handleResponse(response);
+    }
+    async handleResponse(response) {
+        const text = await response.text().catch((e) => {
+            this.logger.error("Failed to read response", e);
             throw e;
         });
+        this.logger.debug(`Response: "${text}"`);
+        let result;
+        try {
+            result = JSON.parse(text);
+        }
+        catch (e) {
+            this.logger.error("Failed to parse response:", text);
+            throw e;
+        }
+        if (this.isApiError(result)) {
+            this.logger.error(`Received API error.`, `For more information, see https://www.last.fm/api/errorcodes.`, result);
+            throw new Error(result.message);
+        }
+        return result;
+    }
+    isApiError(error) {
+        return (typeof error === "object" &&
+            error !== null &&
+            "error" in error &&
+            typeof error.error === "number");
     }
 }
 exports.LastFmApi = LastFmApi;

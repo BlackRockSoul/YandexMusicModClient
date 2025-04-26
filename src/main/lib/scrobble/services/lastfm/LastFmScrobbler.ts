@@ -174,7 +174,10 @@ export class LastFmScrobbler implements IScrobblerService {
     try {
       await this.api.updateNowPlaying(getTrackInfo(track));
     } catch (error) {
-      this.logger.error("Failed to update now playing", error);
+      this.logger.error(
+        `Failed to update now playing for track: "${track.title}":`,
+        error
+      );
     }
   }
 
@@ -184,7 +187,10 @@ export class LastFmScrobbler implements IScrobblerService {
     try {
       await this.api.scrobble(getTrackInfo(track));
     } catch (error) {
-      this.logger.error("Failed to send scrobble", error);
+      this.logger.error(
+        `Failed to send scrobble for track: "${track.title}":`,
+        error
+      );
     }
   }
 

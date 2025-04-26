@@ -124,7 +124,7 @@ class LastFmScrobbler {
             await this.api.updateNowPlaying((0, trackInfo_1.getTrackInfo)(track));
         }
         catch (error) {
-            this.logger.error("Failed to update now playing", error);
+            this.logger.error(`Failed to update now playing for track: "${track.title}":`, error);
         }
     }
     async sendScrobble(track) {
@@ -133,7 +133,7 @@ class LastFmScrobbler {
             await this.api.scrobble((0, trackInfo_1.getTrackInfo)(track));
         }
         catch (error) {
-            this.logger.error("Failed to send scrobble", error);
+            this.logger.error(`Failed to send scrobble for track: "${track.title}":`, error);
         }
     }
     async fetchAndStoreSession(token) {
